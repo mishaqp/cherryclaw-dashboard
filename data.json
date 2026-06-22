@@ -1,10 +1,10 @@
 {
-  "cpu_temp": 42.0,
-  "gpu_temp": 38,
-  "gpu_load": 1,
-  "ram": "7.2Gi / 15Gi",
+  "cpu_temp": 49.0,
+  "gpu_temp": 40,
+  "gpu_load": 39,
+  "ram": "7.3Gi / 15Gi",
   "disk": "151G / 475G",
-  "uptime": "2 hours, 0 minute",
+  "uptime": "2 hours, 3 minutes",
   "vpn": true,
-  "updated": "2026-06-22T00:49:16Z"
+  "updated": "2026-06-22T00:52:16Z"
 }
