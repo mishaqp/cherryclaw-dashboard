@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CherryClaw Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #1a1d23);
+            color: var(--tg-theme-text-color, #e4e4e7);
+            padding: 16px;
+            min-height: 100vh;
+        }
+        h1 { font-size: 20px; margin-bottom: 16px; text-align: center; opacity: .9; }
+        .grid { display: grid; gap: 12px; }
+        .card {
+            background: var(--tg-theme-secondary-bg-color, #272a33);
+            border-radius: 12px; padding: 14px;
+        }
+        .card h3 { font-size: 13px; opacity: .6; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+        .card .value { font-size: 28px; font-weight: 700; }
+        .row { display: flex; gap: 12px; }
+        .row > .card { flex: 1; }
+        canvas { max-height: 100px; margin-top: 4px; }
+        .status { text-align: center; font-size: 11px; opacity: .4; margin-top: 16px; }
+        .loading { text-align: center; padding: 40px; opacity: .5; }
+        .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .pulse.online { background: #33cc33; box-shadow: 0 0 6px #33cc33; }
+        .pulse.offline { background: #cc3333; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">Загрузка данных...</div>
+    <div id="content" style="display:none">
+        <h1>🖥 CherryClaw Dashboard</h1>
+        <div class="grid">
+            <div class="row">
+                <div class="card">
+                    <h3>CPU</h3>
+                    <div class="value" id="cpu_temp">--°C</div>
+                    <canvas id="cpu_chart"></canvas>
+                </div>
+                <div class="card">
+                    <h3>GPU</h3>
+                    <div class="value" id="gpu_temp">--°C</div>
+                    <canvas id="gpu_chart"></canvas>
+                </div>
+            </div>
+            <div class="row">
+                <div class="card">
+                    <h3>GPU Load</h3>
+                    <div class="value" id="gpu_load">--%</div>
+                </div>
+                <div class="card">
+                    <h3>RAM</h3>
+                    <div class="value" id="ram">--/-- GB</div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="card">
+                    <h3>Disk /var</h3>
+                    <div class="value" id="disk">--/-- GB</div>
+                </div>
+                <div class="card">
+                    <h3>VPN</h3>
+                    <div class="value" id="vpn">--</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Uptime</h3>
+                <div class="value" id="uptime" style="font-size:16px">--</div>
+            </div>
+        </div>
+        <div class="status">
+            <span class="pulse" id="pulse"></span>
+            <span id="updated">Обновлено: --</span>
+        </div>
+    </div>
+    <script>
+        async function load() {
+            try {
+                const r = await fetch('data.json?t=' + Date.now());
+                const d = await r.json();
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+                document.getElementById('cpu_temp').textContent = d.cpu_temp + '°C';
+                document.getElementById('gpu_temp').textContent = d.gpu_temp + '°C';
+                document.getElementById('gpu_load').textContent = d.gpu_load + '%';
+                document.getElementById('ram').textContent = d.ram;
+                document.getElementById('disk').textContent = d.disk;
+                document.getElementById('vpn').innerHTML = d.vpn ? '🟢 Online' : '🔴 Offline';
+                document.getElementById('uptime').textContent = '⏱ ' + d.uptime;
+
+                const p = document.getElementById('pulse');
+                p.className = 'pulse ' + (d.vpn ? 'online' : 'offline');
+
+                const now = new Date();
+                document.getElementById('updated').textContent =
+                    'Обновлено: ' + now.toLocaleTimeString('ru-RU');
+
+                // Charts
+                makeGauge('cpu_chart', d.cpu_temp, 100, '#f97316');
+                makeGauge('gpu_chart', d.gpu_temp, 90, '#ef4444');
+            } catch(e) {
+                document.getElementById('loading').textContent = 'Нет данных. Ожидание...';
+                setTimeout(load, 3000);
+            }
+        }
+
+        function makeGauge(id, value, max, color) {
+            const ctx = document.getElementById(id);
+            if (!ctx) return;
+            const existing = Chart.getChart(id);
+            if (existing) existing.destroy();
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [value, max - value],
+                        backgroundColor: [color, '#3f3f46'],
+                        borderWidth: 0,
+                        circumference: 270,
+                        rotation: 225,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '80%',
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
+                }
+            });
+        }
+
+        load();
+        setInterval(load, 15000);
+    </script>
+</body>
+</html>
