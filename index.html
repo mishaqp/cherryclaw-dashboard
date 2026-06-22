@@ -5,81 +5,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>CherryClaw Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--tg-theme-bg-color, #1a1d23);
             color: var(--tg-theme-text-color, #e4e4e7);
-            padding: 16px;
-            min-height: 100vh;
+            padding: 16px; min-height: 100vh;
         }
-        h1 { font-size: 20px; margin-bottom: 16px; text-align: center; opacity: .9; }
-        .grid { display: grid; gap: 12px; }
+        h1 { font-size: 18px; margin-bottom: 12px; text-align: center; opacity: .9; }
+        .grid { display: grid; gap: 10px; }
         .card {
             background: var(--tg-theme-secondary-bg-color, #272a33);
-            border-radius: 12px; padding: 14px;
+            border-radius: 12px; padding: 12px;
         }
-        .card h3 { font-size: 13px; opacity: .6; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
-        .card .value { font-size: 28px; font-weight: 700; }
-        .row { display: flex; gap: 12px; }
+        .card h3 { font-size: 11px; opacity: .5; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+        .card .value { font-size: 24px; font-weight: 700; }
+        .row { display: flex; gap: 10px; }
         .row > .card { flex: 1; }
-        canvas { max-height: 100px; margin-top: 4px; }
-        .status { text-align: center; font-size: 11px; opacity: .4; margin-top: 16px; }
+        canvas { max-height: 80px; margin-top: 2px; }
+        .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+        .btn {
+            flex: 1; min-width: 70px; padding: 10px 8px; border: none; border-radius: 10px;
+            font-size: 13px; font-weight: 600; cursor: pointer; color: #fff;
+            transition: opacity .15s;
+        }
+        .btn:active { opacity: .7; }
+        .btn.primary { background: var(--tg-theme-button-color, #3b82f6); }
+        .btn.danger { background: #dc2626; }
+        .btn.success { background: #16a34a; }
+        .btn.warn { background: #f59e0b; }
+        .btn.full { flex: 100%; }
+        .cmd-row { display: flex; gap: 6px; margin-top: 8px; }
+        .cmd-row input {
+            flex: 1; padding: 10px; border: 1px solid #3f3f46; border-radius: 10px;
+            background: var(--tg-theme-secondary-bg-color, #272a33);
+            color: var(--tg-theme-text-color, #e4e4e7); font-size: 14px;
+        }
+        .toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #333; color: #fff; padding: 10px 20px; border-radius: 8px;
+            font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 100;
+        }
+        .toast.show { opacity: 1; }
         .loading { text-align: center; padding: 40px; opacity: .5; }
-        .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-        .pulse.online { background: #33cc33; box-shadow: 0 0 6px #33cc33; }
-        .pulse.offline { background: #cc3333; }
     </style>
 </head>
 <body>
-    <div class="loading" id="loading">Загрузка данных...</div>
+    <div class="loading" id="loading">Загрузка...</div>
     <div id="content" style="display:none">
-        <h1>🖥 CherryClaw Dashboard</h1>
+        <h1>🖥 CherryClaw</h1>
         <div class="grid">
             <div class="row">
-                <div class="card">
-                    <h3>CPU</h3>
-                    <div class="value" id="cpu_temp">--°C</div>
-                    <canvas id="cpu_chart"></canvas>
-                </div>
-                <div class="card">
-                    <h3>GPU</h3>
-                    <div class="value" id="gpu_temp">--°C</div>
-                    <canvas id="gpu_chart"></canvas>
-                </div>
+                <div class="card"><h3>CPU</h3><div class="value" id="cpu_temp">--</div><canvas id="cpu_chart"></canvas></div>
+                <div class="card"><h3>GPU</h3><div class="value" id="gpu_temp">--</div><canvas id="gpu_chart"></canvas></div>
             </div>
             <div class="row">
-                <div class="card">
-                    <h3>GPU Load</h3>
-                    <div class="value" id="gpu_load">--%</div>
-                </div>
-                <div class="card">
-                    <h3>RAM</h3>
-                    <div class="value" id="ram">--/-- GB</div>
-                </div>
+                <div class="card"><h3>GPU Load</h3><div class="value" id="gpu_load">--</div></div>
+                <div class="card"><h3>RAM</h3><div class="value" id="ram">--</div></div>
             </div>
-            <div class="row">
-                <div class="card">
-                    <h3>Disk /var</h3>
-                    <div class="value" id="disk">--/-- GB</div>
-                </div>
-                <div class="card">
-                    <h3>VPN</h3>
-                    <div class="value" id="vpn">--</div>
-                </div>
-            </div>
-            <div class="card">
-                <h3>Uptime</h3>
-                <div class="value" id="uptime" style="font-size:16px">--</div>
-            </div>
+            <div class="card"><h3>Disk</h3><div class="value" id="disk">--</div></div>
         </div>
-        <div class="status">
-            <span class="pulse" id="pulse"></span>
-            <span id="updated">Обновлено: --</span>
+
+        <div class="actions">
+            <button class="btn primary" onclick="sendCmd('status')">🔄 Обновить</button>
+            <button class="btn" id="vpn_btn" style="background:#f59e0b" onclick="sendCmd('vpn')">🔐 VPN</button>
+            <button class="btn success" onclick="sendCmd('apps')">📱 Приложения</button>
         </div>
+        <div class="cmd-row">
+            <input type="text" id="cmd_input" placeholder="Команда (ls, sensors...)" enterkeyhint="done">
+            <button class="btn primary" style="flex:0;min-width:60px" onclick="runCmd()">▶️</button>
+        </div>
+        <div style="text-align:center;margin-top:12px;font-size:11px;opacity:.3" id="updated">--</div>
     </div>
+    <div class="toast" id="toast"></div>
+
     <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
+
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2000);
+        }
+
+        function sendCmd(cmd) {
+            if (tg) {
+                tg.HapticFeedback?.impactOccurred('medium');
+                tg.sendData(cmd);
+            }
+            toast('✅ Команда отправлена: ' + cmd);
+        }
+
+        function runCmd() {
+            const inp = document.getElementById('cmd_input');
+            const cmd = inp.value.trim();
+            if (!cmd) return;
+            if (tg) {
+                tg.HapticFeedback?.impactOccurred('light');
+                tg.sendData('cmd:' + cmd);
+            }
+            toast('▶️ ' + cmd);
+            inp.value = '';
+        }
+
+        // Enter в поле ввода
+        document.getElementById('cmd_input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') runCmd();
+        });
+
         async function load() {
             try {
                 const r = await fetch('data.json?t=' + Date.now());
@@ -87,24 +126,21 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
 
-                document.getElementById('cpu_temp').textContent = d.cpu_temp + '°C';
-                document.getElementById('gpu_temp').textContent = d.gpu_temp + '°C';
-                document.getElementById('gpu_load').textContent = d.gpu_load + '%';
-                document.getElementById('ram').textContent = d.ram;
-                document.getElementById('disk').textContent = d.disk;
-                document.getElementById('vpn').innerHTML = d.vpn ? '🟢 Online' : '🔴 Offline';
-                document.getElementById('uptime').textContent = '⏱ ' + d.uptime;
+                document.getElementById('cpu_temp').textContent = (d.cpu_temp||0) + '°C';
+                document.getElementById('gpu_temp').textContent = (d.gpu_temp||0) + '°C';
+                document.getElementById('gpu_load').textContent = (d.gpu_load||0) + '%';
+                document.getElementById('ram').textContent = d.ram || '--';
+                document.getElementById('disk').textContent = d.disk || '--';
 
-                const p = document.getElementById('pulse');
-                p.className = 'pulse ' + (d.vpn ? 'online' : 'offline');
+                const vpnBtn = document.getElementById('vpn_btn');
+                vpnBtn.textContent = d.vpn ? '🔐 VPN Вкл' : '🔐 VPN Выкл';
+                vpnBtn.style.background = d.vpn ? '#16a34a' : '#f59e0b';
 
-                const now = new Date();
                 document.getElementById('updated').textContent =
-                    'Обновлено: ' + now.toLocaleTimeString('ru-RU');
+                    'Обновлено: ' + new Date(d.updated).toLocaleTimeString('ru-RU');
 
-                // Charts
-                makeGauge('cpu_chart', d.cpu_temp, 100, '#f97316');
-                makeGauge('gpu_chart', d.gpu_temp, 90, '#ef4444');
+                makeGauge('cpu_chart', d.cpu_temp||0, 100, '#f97316');
+                makeGauge('gpu_chart', d.gpu_temp||0, 90, '#ef4444');
             } catch(e) {
                 document.getElementById('loading').textContent = 'Нет данных. Ожидание...';
                 setTimeout(load, 3000);
@@ -120,7 +156,7 @@
                 type: 'doughnut',
                 data: {
                     datasets: [{
-                        data: [value, max - value],
+                        data: [value, Math.max(0.1, max - value)],
                         backgroundColor: [color, '#3f3f46'],
                         borderWidth: 0,
                         circumference: 270,
@@ -136,7 +172,7 @@
         }
 
         load();
-        setInterval(load, 15000);
+        setInterval(load, 30000);
     </script>
 </body>
 </html>
